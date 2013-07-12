@@ -106,9 +106,11 @@ def _call_cmd(cmd_list):
 
     
 def compile_xelatex(tex_fname, pdf_folder, temp_folder):
-    (code, out, err) = _call_cmd(['xelatex', '-output-directory', pdf_folder, '-aux-directory', temp_folder, tex_fname])
+    (code, out, err) = _call_cmd(['xelatex', '-interaction=nonstopmode',
+        '-output-directory', pdf_folder, '-aux-directory', temp_folder, tex_fname])
     if code != 0:
-        raise MikTexException('Failed to execute xelatex for file "%s"\n.' % tex_fname, out, err)
+        raise MikTexException('Failed to execute xelatex for file "%s"\n.' %
+            tex_fname, out, err)
 
         
 def preinstall_packages():
