@@ -9,6 +9,12 @@ XELATEX_PREAMBLE0 = r'''
 \usepackage[a4paper,includefoot,left=1in,right=1in,top=0.3in,bottom=0.2in,footskip=.1in]{geometry}
 \usepackage{fancyhdr}
 \usepackage[russian,english]{babel}
+\usepackage[usenames,dvipsnames,svgnames]{xcolor}
+\usepackage{etoolbox}
+\makeatletter
+\preto{\@verbatim}{\topsep=0pt \partopsep=0pt }
+\makeatother
+
 \setmonofont{Lucida Console}
 \setromanfont{Lucida Console}
 
@@ -33,6 +39,8 @@ XELATEX_PREAMBLE1 = r'''
 
 XELATEX_PAGE_DELIMETER = r"\end{verbatim}\newpage\begin{verbatim}" + "\n"
 
+XELATEX_INVERT_COLORS = '''\\end{{verbatim}}\\verb|{0}|\\colorbox{{black}}{{\\color{{white}}{1}}}\\verb|{2}|\\begin{{verbatim}}\n'''
+
 
 XELATEX_FILE_PAGES_START = r"\begin{verbatim}" + '\n'
 XELATEX_FILE_PAGES_END = r'''
@@ -46,7 +54,8 @@ XELATEX_RESET_PAGE_NUMBER = r"\setcounter{page}{1}" + '\n'
 XELATEX_EOF = r"\end{verbatim}\clearpage}\end{document}" + "\n"
 
 
-_REQUIRED_PACKAGES = ('extsizes', 'l3packages', 'l3kernel', 'tipa', 'xetex-def', 'realscripts', 'metalogo', 'fancyhdr')
+_REQUIRED_PACKAGES = ('extsizes', 'l3packages', 'l3kernel', 'tipa',
+    'xetex-def', 'realscripts', 'metalogo', 'fancyhdr', 'xcolor', 'etoolbox')
 
 
 class MikTexException(Exception):
@@ -64,10 +73,18 @@ def make_xelatex_src(code, lines, metadata):
     
     for i, l in enumerate(lines):
         meta = metadata.get(i, [])
-        for m in meta:
-            if m[2] == MetaTag.NEW_PAGE:
+        a = True
+        for (start, length, tag) in meta:
+            # Note: one line can be changed multiple times
+            if tag == MetaTag.NEW_PAGE:
                 src.append(XELATEX_PAGE_DELIMETER)
-        src.append(l)
+            elif tag == MetaTag.REMOVE_LINE:
+                a = False
+            elif tag == MetaTag.INVERT_COLORS:
+                end = start + length
+                l = XELATEX_INVERT_COLORS.format(l[:start], l[start:end], l[end:].rstrip('\n')) 
+        if a:
+            src.append(l)
             
     src.append(XELATEX_EOF)
     
