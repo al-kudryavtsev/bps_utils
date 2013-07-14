@@ -6,7 +6,7 @@ XELATEX_PREAMBLE0 = r'''
 %!TEX encoding = UTF-8 Unicode
 \documentclass[9pt]{extarticle}
 \usepackage{xltxtra,fontspec,xunicode}
-\usepackage[a4paper,includefoot,left=1in,right=1in,top=0.3in,bottom=0.2in,footskip=.1in]{geometry}
+\usepackage[a4paper,includefoot,left=0.8in,right=0.5in,top=0.3in,bottom=0.2in,footskip=.1in]{geometry}
 \usepackage{fancyhdr}
 \usepackage[russian,english]{babel}
 \usepackage[usenames,dvipsnames,svgnames]{xcolor}
@@ -45,7 +45,7 @@ XELATEX_LINE = u'''\\verb|{0}|\\\\\n'''
 
 XELATEX_INVERT_COLORS = '''\\verb|{0}|\\hspace{{- \\fboxsep}}\\colorbox{{black}}{{\\color{{white}}{1}}}\\hspace{{- \\fboxsep}}'''
 XELATEX_UNDERLINE = '''\\verb|{0}|\\SaveVerb{{UnderlinedVerb}}|{1}|\\uline{{\\UseVerb{{UnderlinedVerb}}}}'''
-
+XELATEX_LARGE_FONT = '''\\verb|{0}|{{\\Large {1}}}'''
 
 XELATEX_FILE_PAGES_START = r"\begin{verbatim}" + '\n'
 XELATEX_FILE_PAGES_END = r'''
@@ -73,7 +73,11 @@ class MikTexException(Exception):
         self.stdout = stdout
         self.stderr = stderr
 
+        
+def _tex_escape(line):
+    return line.replace('%', '\\%')
 
+    
 def make_xelatex_src(code, lines, metadata):
     src = XELATEX_PREAMBLE0 + [XELATEX_FOOTER.format(code)] + XELATEX_PREAMBLE1
     
@@ -92,11 +96,15 @@ def make_xelatex_src(code, lines, metadata):
             elif tag == MetaTag.REMOVE_LINE:
                 a = False
             elif tag == MetaTag.INVERT_COLORS:
-                new_l += XELATEX_INVERT_COLORS.format(l[cur_offset:start], l[start:end])
+                es = _tex_escape(l[start:end])
+                new_l += XELATEX_INVERT_COLORS.format(l[cur_offset:start], es)
                 cur_offset = end
             elif tag == MetaTag.UNDERLINE:
-                ul = l[start:end]
-                new_l += XELATEX_UNDERLINE.format(l[cur_offset:start], ul)
+                new_l += XELATEX_UNDERLINE.format(l[cur_offset:start], l[start:end])
+                cur_offset = end
+            elif tag == MetaTag.LARGE_FONT:
+                es = _tex_escape(l[start:end])
+                new_l += XELATEX_LARGE_FONT.format(l[cur_offset:start], es)
                 cur_offset = end
         if cur_offset < len(l):
             new_l += XELATEX_LINE.format(l[cur_offset:])

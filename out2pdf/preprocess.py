@@ -8,6 +8,8 @@ class MetaTag(object):
     REMOVE_LINE = 2
     REPLACE = 3
     UNDERLINE = 4
+    LARGE_FONT = 5
+    FRAME = 6
 
 class PreprocessException(Exception):
     pass
@@ -74,6 +76,21 @@ class TextProcessor(object):
         self._metadata_update(match.start(), match.end() - match.start(),
             MetaTag.UNDERLINE)
         return match.group()
+    
+    def _op_flaps_and_aircond(self, match):
+        replacement = match.group()
+        if match.group('flaps') is not None:
+            self._metadata_update(match.start('flaps'), match.end('flaps') -
+                match.start('flaps'), MetaTag.LARGE_FONT)
+            city = match.group('city').strip()
+            city_off = match.start('city')
+            replacement = replacement[:city_off - 2] + city
+
+        ac = match.group('ac')
+        if ac == 'AIR COND OFF':
+            self._metadata_update(match.start('ac'), match.end('ac') -
+                match.start('ac'), MetaTag.INVERT_COLORS)
+        return replacement
         
     def _op_remove_line(self, match):
         self._metadata_update(0, 0, MetaTag.REMOVE_LINE)
