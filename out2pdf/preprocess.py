@@ -6,6 +6,7 @@ class MetaTag(object):
     NEW_PAGE = 0
     INVERT_COLORS = 1
     REMOVE_LINE = 2
+    REPLACE = 3
 
 class PreprocessException(Exception):
     pass
@@ -23,25 +24,36 @@ class TextProcessor(object):
             self._ops[ac_eng] = _tops
         self._match_func_partial = functools.partial(self._process_match, self)
 
-    def _metadata_update(self, start, end, *args):
+    # Update metadata with new element
+    # If we already have element for current line, insert new one into right position
+    # Offset is required to update start/end of tail elements if line len changes
+    def _metadata_update(self, start, length, tag, offset=0):
         items = self._metadata.get(self._line_num, None)
+        end = start + length
         
+        #print (self._line_num, start, end, tag, offset)
         if items is None:
-            self._metadata[self._line_num] = [(start, end) + tuple(args)]
+            self._metadata[self._line_num] = [[start, length, tag]]
         else:
             for n, item in enumerate(items):
-                if end <= item[0]:
-                    items.insert(n, (start, end) + tuple(args))
+                if end <= item[0] + offset:
+                    items.insert(n, [start, length, tag])
+                    for i in range(n + 1, len(items)):
+                        items[i][0] += offset
                     break
-                if start < item[1]:
+                if start < item[0] + item[1] + offset:
                     raise PreprocessException("File '%s', line %d: cannot add "
-                        "overlapping operation at range [%d, %d].\n" %
-                        (self._data_fname, self._line_num, start, end))
+                        "overlapping operation at range [%d, %d], "
+                        "offset %d.\n" % (self._data_fname, self._line_num,
+                            start, end, offset))
                 if n == len(items) - 1:
-                    items.append((start, end) + tuple(args))
+                    items.append([start, length, tag])
                     break
+        #print self._metadata[self._line_num]
         
     def _op_replace(self, match, replacement):
+        self._metadata_update(match.start(), len(replacement),
+            MetaTag.REPLACE, offset=len(replacement) - len(match.group()))
         return replacement
     
     def _op_invert_colors(self, match):
@@ -52,8 +64,9 @@ class TextProcessor(object):
         ls = replacement.lstrip()
         rs = ls.rstrip()
         off = s[1] - len(ls)
-        
-        self._metadata_update(off, off + len(rs), MetaTag.INVERT_COLORS)
+        delta_offset = len(replacement) - (s[1] - s[0])
+        self._metadata_update(off, len(rs), MetaTag.INVERT_COLORS,
+            offset=delta_offset)
         return replacement
     
     def _op_remove_line(self, match):
@@ -61,9 +74,12 @@ class TextProcessor(object):
         return ""
 
     def _op_newpage(self, match):
+        tag = MetaTag.REPLACE
         if self._line_num > 0:
             # Put newpage tags only between pages
-            self._metadata_update(0, 0, MetaTag.NEW_PAGE)
+            tag = MetaTag.NEW_PAGE
+        # Newpage detected by form feed thus offset is -1
+        self._metadata_update(0, 0, tag, offset=-1)
         return ""
 
     def _process_match(self, match):
