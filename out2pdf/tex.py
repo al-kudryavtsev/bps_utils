@@ -11,6 +11,9 @@ XELATEX_PREAMBLE0 = r'''
 \usepackage[russian,english]{babel}
 \usepackage[usenames,dvipsnames,svgnames]{xcolor}
 \usepackage{etoolbox}
+\usepackage[normalem]{ulem}
+\usepackage{fancyvrb}
+\DefineShortVerb{\|}
 \makeatletter
 \preto{\@verbatim}{\topsep=0pt \partopsep=0pt }
 \makeatother
@@ -41,6 +44,7 @@ XELATEX_PAGE_DELIMETER = "\\newpage\n"
 XELATEX_LINE = u'''\\verb|{0}|\\\\\n'''
 
 XELATEX_INVERT_COLORS = '''\\verb|{0}|\\hspace{{- \\fboxsep}}\\colorbox{{black}}{{\\color{{white}}{1}}}\\hspace{{- \\fboxsep}}'''
+XELATEX_UNDERLINE = '''\\verb|{0}|\\SaveVerb{{UnderlinedVerb}}|{1}|\\uline{{\\UseVerb{{UnderlinedVerb}}}}'''
 
 
 XELATEX_FILE_PAGES_START = r"\begin{verbatim}" + '\n'
@@ -55,8 +59,9 @@ XELATEX_RESET_PAGE_NUMBER = r"\setcounter{page}{1}" + '\n'
 XELATEX_EOF = r"\clearpage}\end{document}" + "\n"
 
 
-_REQUIRED_PACKAGES = ('extsizes', 'l3packages', 'l3kernel', 'tipa',
-    'xetex-def', 'realscripts', 'metalogo', 'fancyhdr', 'xcolor', 'etoolbox')
+_REQUIRED_PACKAGES = ('extsizes', 'l3packages', 'l3kernel', 'tipa', 'ulem',
+    'xetex-def', 'realscripts', 'metalogo', 'fancyhdr', 'xcolor', 'etoolbox',
+    'fancyvrb')
 
 
 class MikTexException(Exception):
@@ -80,14 +85,18 @@ def make_xelatex_src(code, lines, metadata):
         l = l.rstrip('\n')
         # Metadata for one line go in column ascending order
         for (start, length, tag) in meta:
+            end = start + length
             # Note: one line can be changed multiple times
             if tag == MetaTag.NEW_PAGE:
                 src.append(XELATEX_PAGE_DELIMETER)
             elif tag == MetaTag.REMOVE_LINE:
                 a = False
             elif tag == MetaTag.INVERT_COLORS:
-                end = start + length
                 new_l += XELATEX_INVERT_COLORS.format(l[cur_offset:start], l[start:end])
+                cur_offset = end
+            elif tag == MetaTag.UNDERLINE:
+                ul = l[start:end]
+                new_l += XELATEX_UNDERLINE.format(l[cur_offset:start], ul)
                 cur_offset = end
         if cur_offset < len(l):
             new_l += XELATEX_LINE.format(l[cur_offset:])

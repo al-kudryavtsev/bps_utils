@@ -7,6 +7,7 @@ class MetaTag(object):
     INVERT_COLORS = 1
     REMOVE_LINE = 2
     REPLACE = 3
+    UNDERLINE = 4
 
 class PreprocessException(Exception):
     pass
@@ -68,7 +69,12 @@ class TextProcessor(object):
         self._metadata_update(off, len(rs), MetaTag.INVERT_COLORS,
             offset=delta_offset)
         return replacement
-    
+
+    def _op_underline(self, match):
+        self._metadata_update(match.start(), match.end() - match.start(),
+            MetaTag.UNDERLINE)
+        return match.group()
+        
     def _op_remove_line(self, match):
         self._metadata_update(0, 0, MetaTag.REMOVE_LINE)
         return ""
