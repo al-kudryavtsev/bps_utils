@@ -14,10 +14,11 @@ XELATEX_PREAMBLE0 = r'''
 \makeatletter
 \preto{\@verbatim}{\topsep=0pt \partopsep=0pt }
 \makeatother
+\setlength{\parindent}{0in}
 
 \setmonofont{Lucida Console}
 \setromanfont{Lucida Console}
-
+%\setlength{\fboxsep}{2pt}
 \fancypagestyle{plain}{%
 \fancyhf{} % clear all header and footer fields
 '''.splitlines(True)
@@ -33,13 +34,13 @@ XELATEX_PREAMBLE1 = r'''
 
 \begin{document}
 {\fontsize{9pt}{10.5pt}\selectfont
-\begin{verbatim}
 '''.splitlines(True)
 
 
-XELATEX_PAGE_DELIMETER = r"\end{verbatim}\newpage\begin{verbatim}" + "\n"
+XELATEX_PAGE_DELIMETER = "\\newpage\n"
+XELATEX_LINE = u'''\\verb|{0}|\\\\\n'''
 
-XELATEX_INVERT_COLORS = '''\\end{{verbatim}}\\verb|{0}|\\colorbox{{black}}{{\\color{{white}}{1}}}\\verb|{2}|\\begin{{verbatim}}\n'''
+XELATEX_INVERT_COLORS = '''\\verb|{0}|\\hspace{{- \\fboxsep}}\\colorbox{{black}}{{\\color{{white}}{1}}}\\hspace{{- \\fboxsep}}'''
 
 
 XELATEX_FILE_PAGES_START = r"\begin{verbatim}" + '\n'
@@ -51,7 +52,7 @@ XELATEX_FILE_PAGES_END = r'''
 XELATEX_RESET_PAGE_NUMBER = r"\setcounter{page}{1}" + '\n'
 
 
-XELATEX_EOF = r"\end{verbatim}\clearpage}\end{document}" + "\n"
+XELATEX_EOF = r"\clearpage}\end{document}" + "\n"
 
 
 _REQUIRED_PACKAGES = ('extsizes', 'l3packages', 'l3kernel', 'tipa',
@@ -74,6 +75,10 @@ def make_xelatex_src(code, lines, metadata):
     for i, l in enumerate(lines):
         meta = metadata.get(i, [])
         a = True
+        new_l = ""
+        cur_offset = 0
+        l = l.rstrip('\n')
+        # Metadata for one line go in column ascending order
         for (start, length, tag) in meta:
             # Note: one line can be changed multiple times
             if tag == MetaTag.NEW_PAGE:
@@ -82,9 +87,14 @@ def make_xelatex_src(code, lines, metadata):
                 a = False
             elif tag == MetaTag.INVERT_COLORS:
                 end = start + length
-                l = XELATEX_INVERT_COLORS.format(l[:start], l[start:end], l[end:].rstrip('\n')) 
+                new_l += XELATEX_INVERT_COLORS.format(l[cur_offset:start], l[start:end])
+                cur_offset = end
+        if cur_offset < len(l):
+            new_l += XELATEX_LINE.format(l[cur_offset:])
+        if cur_offset == len(l):
+            new_l += '\\\\\n'
         if a:
-            src.append(l)
+            src.append(new_l)
             
     src.append(XELATEX_EOF)
     
