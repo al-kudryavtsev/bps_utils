@@ -82,15 +82,15 @@ class TextProcessor(object):
         if match.group('flaps') is not None:
             self._metadata_update(match.start('flaps'), match.end('flaps') -
                 match.start('flaps'), MetaTag.LARGE_FONT)
-            city = match.group('city').strip()
-            city_off = match.start('city')
-            replacement = replacement[:city_off - 2] + city
-
+        city = match.group('city')
+        city_off = match.start('city')
+        replacement = replacement[:city_off - 2] + city
+        
         ac = match.group('ac')
         if ac == 'AIR COND OFF':
             self._metadata_update(match.start('ac'), match.end('ac') -
                 match.start('ac'), MetaTag.INVERT_COLORS)
-        return replacement
+        return replacement.rstrip()
         
     def _op_remove_line(self, match):
         self._metadata_update(0, 0, MetaTag.REMOVE_LINE)
@@ -122,6 +122,7 @@ class TextProcessor(object):
         self._metadata = {}
         
         for i, l in enumerate(lines):
+            l = l.rstrip()
             self._line_num = i
             for pattern in tops.keys():
                 self._pattern = pattern

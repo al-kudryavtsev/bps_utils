@@ -43,7 +43,7 @@ XELATEX_PREAMBLE1 = r'''
 XELATEX_PAGE_DELIMETER = "\\newpage\n"
 XELATEX_LINE = u'''\\verb|{0}|\\\\\n'''
 
-XELATEX_INVERT_COLORS = '''\\verb|{0}|\\hspace{{- \\fboxsep}}\\colorbox{{black}}{{\\color{{white}}{1}}}\\hspace{{- \\fboxsep}}'''
+XELATEX_INVERT_COLORS = u'''\\verb|{0}|\\hspace{{- \\fboxsep}}\\colorbox{{black}}{{\\color{{white}}{1}}}\\hspace{{- \\fboxsep}}'''
 XELATEX_UNDERLINE = '''\\verb|{0}|\\SaveVerb{{UnderlinedVerb}}|{1}|\\uline{{\\UseVerb{{UnderlinedVerb}}}}'''
 XELATEX_LARGE_FONT = '''\\verb|{0}|{{\\Large {1}}}'''
 
