@@ -9,7 +9,7 @@ import codecs
 import shutil
 
 from task import *
-from preprocess import preprocess
+from preprocess import (preprocess, PreprocessException)
 import tex
 
 with open(AIRPORT_FILE, 'r') as f:
@@ -32,11 +32,8 @@ def process_file(data_fname, is_takeoff, ac_eng, apt_code, pdf_folder, pdf_fname
     if apt_code in MOSCOW_APTS:
         pdf_basename = '_' + pdf_basename
     
-    with open(data_fname, 'r') as f:
-        data = [unicode(l, 'cp1251') for l in f.readlines()]
-    
-    data = preprocess(data, ac_eng, is_takeoff)
-    tex_src = tex.make_xelatex_src(apt_code, data)
+    data, metadata = preprocess(data_fname, ac_eng, is_takeoff)
+    tex_src = tex.make_xelatex_src(apt_code, data, metadata)
     
     tex_fname = os.path.join(temp_folder, pdf_basename[:-4] + '.tex')
     with open(tex_fname, 'w') as f:

@@ -1,4 +1,5 @@
 import subprocess
+from preprocess import MetaTag
 
 XELATEX_PREAMBLE0 = r'''
 %!TEX TS-program = xelatex
@@ -58,14 +59,17 @@ class MikTexException(Exception):
         self.stderr = stderr
 
 
-def make_xelatex_src(code, pages):
+def make_xelatex_src(code, lines, metadata):
     src = XELATEX_PREAMBLE0 + [XELATEX_FOOTER.format(code)] + XELATEX_PREAMBLE1
     
-    for i, page in enumerate(pages):
-        src += page
-        if i + 1 != len(pages):
-            src += [XELATEX_PAGE_DELIMETER]
-    src += [XELATEX_EOF]
+    for i, l in enumerate(lines):
+        meta = metadata.get(i, [])
+        for m in meta:
+            if m[2] == MetaTag.NEW_PAGE:
+                src.append(XELATEX_PAGE_DELIMETER)
+        src.append(l)
+            
+    src.append(XELATEX_EOF)
     
     return src
 

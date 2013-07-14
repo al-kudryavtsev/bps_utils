@@ -2,9 +2,13 @@ import functools
 import re
 from ops import TAKEOFF_OPS, LANDING_OPS
 
-NEW_PAGE = 0
-INVERT_COLORS = 1
-REMOVE_LINE = 2
+class MetaTag(object):
+    NEW_PAGE = 0
+    INVERT_COLORS = 1
+    REMOVE_LINE = 2
+
+class PreprocessException(Exception):
+    pass
 
 class TextProcessor(object):
     
@@ -19,8 +23,25 @@ class TextProcessor(object):
             self._ops[ac_eng] = _tops
         self._match_func_partial = functools.partial(self._process_match, self)
 
+    def _metadata_update(self, start, end, *args):
+        items = self._metadata.get(self._line_num, None)
+        
+        if items is None:
+            self._metadata[self._line_num] = [(start, end) + tuple(args)]
+        else:
+            for n, item in enumerate(items):
+                if end <= item[0]:
+                    items.insert(n, (start, end) + tuple(args))
+                    break
+                if start < item[1]:
+                    raise PreprocessException("File '%s', line %d: cannot add "
+                        "overlapping operation at range [%d, %d].\n" %
+                        (self._data_fname, self._line_num, start, end))
+                if n == len(items) - 1:
+                    items.append((start, end) + tuple(args))
+                    break
+        
     def _op_replace(self, match, replacement):
-        #print "REPLACE '%s' with '%s'" % (match.group(),replacement)
         return replacement
     
     def _op_invert_colors(self, match):
@@ -32,41 +53,40 @@ class TextProcessor(object):
         rs = ls.rstrip()
         off = s[1] - len(ls)
         
-        self._metadata.append((self._line_num, off, off + len(rs), INVERT_COLORS))
+        self._metadata_update(off, off + len(rs), MetaTag.INVERT_COLORS)
         return replacement
     
     def _op_remove_line(self, match):
-        #print "REMOVE_LINE '%s'" % match.group()
-        self._metadata.append((self._line_num, 0, 0, REMOVE_LINE))
+        self._metadata_update(0, 0, MetaTag.REMOVE_LINE)
         return ""
 
     def _op_newpage(self, match):
-        self._metadata.append((self._line_num, 0, 0, NEW_PAGE))
+        if self._line_num > 0:
+            # Put newpage tags only between pages
+            self._metadata_update(0, 0, MetaTag.NEW_PAGE)
         return ""
 
     def _process_match(self, match):
         op = self._tops[self._pattern]
         
-        #print op
         if len(op) > 1:
             return op[0](match, *op[1:])
         return op[0](match)
 
 
-    def process_lines(self, lines, ac_eng):
+    def process_lines(self, lines, ac_eng, data_fname):
         tops = self._ops[ac_eng]
         
+        self._data_fname = data_fname
         self._ac_eng = ac_eng
         self._tops = tops
-        self._metadata = []
+        self._metadata = {}
         
         for i, l in enumerate(lines):
             self._line_num = i
             for pattern in tops.keys():
                 self._pattern = pattern
                 l, cnt = pattern.subn(self._process_match, l)
-                #if cnt > 0:
-                #    print "Replaced %d! '%s'" % (cnt, l)
                 lines[i] = l
         return self._metadata
 
@@ -75,20 +95,11 @@ TAKEOFF_PROCESSOR = TextProcessor(TAKEOFF_OPS)
 LANDING_PROCESSOR = TextProcessor(LANDING_OPS)
 
 
-def _extract_pages(lines, metadata):
-    per_page = []
-    start = -1
-    for (ln, s, e, type) in metadata:
-        if type == NEW_PAGE:
-            if start != -1:
-                per_page.append(lines[start:ln])
-            start = ln
-    per_page.append(lines[start:])
-    
-    return per_page
+def preprocess(data_fname, ac_eng, is_takeoff):
 
+    with open(data_fname, 'r') as f:
+        lines = [unicode(l, 'cp1251') for l in f.readlines()]
 
-def preprocess(lines, ac_eng, is_takeoff):
     # Delete 1st page
     i = 0
     while i < len(lines):
@@ -98,22 +109,18 @@ def preprocess(lines, ac_eng, is_takeoff):
 
     # Do required operations
     if is_takeoff:
-        metadata = TAKEOFF_PROCESSOR.process_lines(lines, ac_eng)
+        metadata = TAKEOFF_PROCESSOR.process_lines(lines, ac_eng, data_fname)
     else:
-        metadata = LANDING_PROCESSOR.process_lines(lines, ac_eng)
-
-    # Group lines into pages
-    paged_lines = _extract_pages(lines, metadata)
-    
-    return paged_lines
+        metadata = LANDING_PROCESSOR.process_lines(lines, ac_eng, data_fname)
+    return (lines, metadata)
 
 
 def _test():
-    lines = open("CYOW.out", "r").readlines()
-    res = preprocess(lines, AC_ENG_737_800W_27_26K, True)
-    for page in res:
-        print "NEW PAGE\n"
-        sys.stdout.writelines(page)
+    res, meta = preprocess("CYOW.out", AC_ENG_737_800W_27_26K, True)
+    for i, line in enumerate(res):
+        if i in meta:
+            sys.stdout.write("META[%s]" % str(meta[i]))
+        sys.stdout.write(line)
 
 if __name__ == '__main__':
     import sys
