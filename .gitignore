@@ -36,4 +36,4 @@ nosetests.xml
 
 out2pdf/task.py
 out2pdf/ac_eng.py
-out2pdf/reps.py
+out2pdf/ops.py

@@ -1,6 +1,6 @@
 import functools
 import re
-from reps import TAKEOFF_OPS, LANDING_OPS
+from ops import TAKEOFF_OPS, LANDING_OPS
 
 NEW_PAGE = 0
 INVERT_COLORS = 1
@@ -109,9 +109,6 @@ def preprocess(lines, ac_eng, is_takeoff):
 
 
 def _test():
-    import sys
-    from ac_eng import *
-    
     lines = open("CYOW.out", "r").readlines()
     res = preprocess(lines, AC_ENG_737_800W_27_26K, True)
     for page in res:
@@ -119,4 +116,6 @@ def _test():
         sys.stdout.writelines(page)
 
 if __name__ == '__main__':
+    import sys
+    from ac_eng import *
     _test()
