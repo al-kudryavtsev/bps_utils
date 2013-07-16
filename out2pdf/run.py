@@ -32,7 +32,7 @@ def process_file(data_fname, is_takeoff, ac_eng, apt_code, pdf_folder, pdf_fname
     if apt_code in MOSCOW_APTS:
         pdf_basename = '_' + pdf_basename
     
-    data, metadata = preprocess(data_fname, ac_eng, is_takeoff)
+    data, metadata = preprocess(data_fname, ac_eng, apt_code, is_takeoff)
     tex_src = tex.make_xelatex_src(apt_code, data, metadata)
     
     tex_fname = os.path.join(temp_folder, pdf_basename[:-4] + '.tex')

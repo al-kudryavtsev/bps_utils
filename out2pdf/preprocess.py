@@ -110,7 +110,7 @@ class TextProcessor(object):
             tag = MetaTag.NEW_PAGE
         # Newpage detected by form feed thus offset is -1
         self._metadata_update(0, 0, tag, offset=-1)
-        return ""
+        return match.group()[1:]
 
     def _process_match(self, match):
         op = self._tops[self._pattern]
@@ -120,13 +120,34 @@ class TextProcessor(object):
         return op[0](match)
 
 
-    def process_lines(self, lines, ac_eng, data_fname):
+    def _gen_newpage_re(self, apt_code):
+        cache = self._apt_code_re_cache = getattr(self,
+            "_apt_code_re_cache", {})
+        
+        rex = "\\f.*%s$" % apt_code
+        
+        if not apt_code in cache:
+            cache[apt_code] = re.compile(rex)
+
+        return cache[apt_code]
+
+
+    def _check_has_pages(self):
+        for ln, meta in self._metadata.iteritems():
+            for (start, end, tag) in meta:
+                if tag == MetaTag.NEW_PAGE:
+                    return True
+        return False
+
+
+    def process_lines(self, lines, ac_eng, data_fname, apt_code):
         tops = self._ops[ac_eng]
         
         self._data_fname = data_fname
         self._ac_eng = ac_eng
         self._tops = tops
         self._metadata = {}
+        tops[self._gen_newpage_re(apt_code)] = (self._op_newpage,)
         
         for i, l in enumerate(lines):
             l = l.rstrip()
@@ -135,6 +156,10 @@ class TextProcessor(object):
                 self._pattern = pattern
                 l, cnt = pattern.subn(self._process_match, l)
                 lines[i] = l
+                
+        if self._check_has_pages() is False:
+            raise PreprocessException("File '%s': no valid pages found.\n" %
+                self._data_fname)
         return self._metadata
 
 
@@ -142,7 +167,7 @@ TAKEOFF_PROCESSOR = TextProcessor(TAKEOFF_OPS)
 LANDING_PROCESSOR = TextProcessor(LANDING_OPS)
 
 
-def preprocess(data_fname, ac_eng, is_takeoff):
+def preprocess(data_fname, ac_eng, apt_code, is_takeoff):
 
     with open(data_fname, 'r') as f:
         lines = [unicode(l, 'cp1251') for l in f.readlines()]
@@ -156,14 +181,14 @@ def preprocess(data_fname, ac_eng, is_takeoff):
 
     # Do required operations
     if is_takeoff:
-        metadata = TAKEOFF_PROCESSOR.process_lines(lines, ac_eng, data_fname)
+        metadata = TAKEOFF_PROCESSOR.process_lines(lines, ac_eng, data_fname, apt_code)
     else:
-        metadata = LANDING_PROCESSOR.process_lines(lines, ac_eng, data_fname)
+        metadata = LANDING_PROCESSOR.process_lines(lines, ac_eng, data_fname, apt_code)
     return (lines, metadata)
 
 
 def _test():
-    res, meta = preprocess("CYOW.out", AC_ENG_737_800W_27_26K, True)
+    res, meta = preprocess("CYOW.out", AC_ENG_737_800W_27_26K, "CYOW", True)
     for i, line in enumerate(res):
         if i in meta:
             sys.stdout.write("META[%s]" % str(meta[i]))
