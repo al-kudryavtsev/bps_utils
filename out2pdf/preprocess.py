@@ -72,6 +72,13 @@ class TextProcessor(object):
             offset=delta_offset)
         return replacement
 
+    def _op_replace_invert_colors_range(self, match, replacement, start, end):
+        s = match.span()
+        delta_offset = len(replacement) - (s[1] - s[0])
+        self._metadata_update(s[0] + start, end - start, MetaTag.INVERT_COLORS,
+            offset=delta_offset)
+        return replacement
+
     def _op_underline(self, match):
         self._metadata_update(match.start(), match.end() - match.start(),
             MetaTag.UNDERLINE)

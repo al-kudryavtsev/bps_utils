@@ -21,7 +21,7 @@ XELATEX_PREAMBLE0 = r'''
 
 \setmonofont{Lucida Console}
 \setromanfont{Lucida Console}
-%\setlength{\fboxsep}{2pt}
+\setlength{\fboxsep}{2pt}
 \fancypagestyle{plain}{%
 \fancyhf{} % clear all header and footer fields
 '''.splitlines(True)
@@ -75,7 +75,7 @@ class MikTexException(Exception):
 
         
 def _tex_escape(line):
-    return line.replace('%', '\\%')
+    return line.replace('%', '\\%').replace('_', '\\_')
 
     
 def make_xelatex_src(code, lines, metadata):

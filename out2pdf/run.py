@@ -1,4 +1,4 @@
-
+# coding: cp1251
 import os
 import multiprocessing
 import traceback
@@ -20,7 +20,7 @@ LOG_FILE = None
 
 def log_output(data):
     sys.stdout.write("(%d) %s" % (PROC_ID, data))
-    LOG_FILE.write(data)
+    LOG_FILE.write(data.encode(sys.stdout.encoding, errors='replace'))
 
 
 MOSCOW_APTS = ('UUDD', 'UUWW', 'UUEE')
