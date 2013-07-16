@@ -108,10 +108,13 @@ def process(id, queue, error_queue):
         LOG_FILE.close()
         
 
+ERROR_PRESENT = False
 def check_error(error_queue):
+    global ERROR_PRESENT
     try:
         id = error_queue.get_nowait()
         log_output('Error in process %d.\n' % id)
+        ERROR_PRESENT = True
         raise KeyboardInterrupt
     except Queue.Empty:
         pass
@@ -147,8 +150,8 @@ def finalize(processes, error_queue, force=False):
             if not force:
                 # Check for error only in case no previous error happened
                 check_error(error_queue)
-        
-        
+
+                
 if __name__ == '__main__':
     t0 = datetime.datetime.now()
     
@@ -196,3 +199,14 @@ if __name__ == '__main__':
     log_output("Total time taken: %s\n" % str(delta_time))
     
     LOG_FILE.close()
+    
+    if ERROR_PRESENT is True:
+        import ctypes
+        ctypes.windll.user32.MessageBoxA(0,
+            "An error has occurred. Please check the log!",
+            "BPS Utils",
+            # MB_OK, MB_ICONERROR, MB_SYSTEMMODAL
+            0x00000000L | 0x00000010 | 0x00001000)
+        exit(1)
+    
+    
