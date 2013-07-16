@@ -91,7 +91,7 @@ def make_xelatex_src(code, lines, metadata):
         for (start, length, tag) in meta:
             end = start + length
             # Note: one line can be changed multiple times
-            if tag == MetaTag.NEW_PAGE:
+            if tag == MetaTag.NEW_PAGE and i != 0: # Ignore 1st line new page tag
                 src.append(XELATEX_PAGE_DELIMETER)
             elif tag == MetaTag.REMOVE_LINE:
                 a = False

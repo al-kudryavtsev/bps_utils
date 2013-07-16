@@ -104,12 +104,8 @@ class TextProcessor(object):
         return ""
 
     def _op_newpage(self, match):
-        tag = MetaTag.REPLACE
-        if self._line_num > 0:
-            # Put newpage tags only between pages
-            tag = MetaTag.NEW_PAGE
         # Newpage detected by form feed thus offset is -1
-        self._metadata_update(0, 0, tag, offset=-1)
+        self._metadata_update(0, 0, MetaTag.NEW_PAGE, offset=-1)
         return match.group()[1:]
 
     def _process_match(self, match):
