@@ -94,6 +94,8 @@ def process(id, queue, error_queue):
         log_output('Stderr:\n')
         log_output(e.stderr)
         log_output('Terminating.\n')
+    except Queue.Empty:
+        log_output('Terminating due to empty queue.\n')
     except:
         log_output('An error occured:\n')
         log_output(traceback.format_exc())
@@ -116,12 +118,13 @@ def check_error(error_queue):
         
 def enqueue_and_check(queue, error_queue, args):
     while True:
+        check_error(error_queue)
         try:
             queue.put(args, True, 1)
             break
         except Queue.Full:
             pass
-        check_error(error_queue)
+        
 
         
 def finalize(processes, error_queue, force=False):
@@ -130,7 +133,7 @@ def finalize(processes, error_queue, force=False):
     else:
         log_output('Waiting for all to finish...\n')
     
-    timeout = 2
+    timeout = 0.2
     wait = True
     while wait:
         wait = False
