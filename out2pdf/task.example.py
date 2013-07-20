@@ -12,6 +12,11 @@ TASKS = [
 
 TARGET_FOLDERS = ['OUT_GOOD'] # None for all available
 
+# Group many folders into one, each file per airport groups
+# results of grouped folders
+FOLDER_GROUP_RULES = {f: 'ALL_OPERATIVE' for f in ['OUT_DRY', 'OUT_GOOD',
+    'OUT_MEDIUM', 'OUT_POOR']}
+
 ALL_TASKS = {
     'Boeing 737-300 CFM56-3B-2': {
         'ac_eng': AC_ENG_737_300_22K,
@@ -45,5 +50,7 @@ PDF_NAME_TEMPLATES = {
     'OUT__AC_OFF': '%(code)s_%(ac_eng)s__AC_OFF.pdf',
     'OUT__GOOD_REV_INOP': '%(code)s_%(ac_eng)s__GOOD_REV_INOP.pdf',
     'LAND_OUT_DRY': '%(code)s_%(ac_eng)s__LDG_DRY_DISPATCH.pdf',
-    'LAND_OUT_WET': '%(code)s_%(ac_eng)s__LDG_WET_DISPATCH.pdf'
+    'LAND_OUT_WET': '%(code)s_%(ac_eng)s__LDG_WET_DISPATCH.pdf',
+    
+    'ALL_OPERATIVE': '%(code)s_%(ac_eng)s_ALL_OPERATIVE.pdf',
 }

@@ -47,11 +47,6 @@ XELATEX_INVERT_COLORS = u'''\\verb|{0}|\\hspace{{- \\fboxsep}}\\colorbox{{black}
 XELATEX_UNDERLINE = '''\\verb|{0}|\\SaveVerb{{UnderlinedVerb}}|{1}|\\uline{{\\UseVerb{{UnderlinedVerb}}}}'''
 XELATEX_LARGE_FONT = '''\\verb|{0}|{{\\Large {1}}}'''
 
-XELATEX_FILE_PAGES_START = r"\begin{verbatim}" + '\n'
-XELATEX_FILE_PAGES_END = r'''
-\end{verbatim}\newpage
-'''.splitlines(True)
-
 
 XELATEX_RESET_PAGE_NUMBER = r"\setcounter{page}{1}" + '\n'
 
@@ -77,9 +72,14 @@ class MikTexException(Exception):
 def _tex_escape(line):
     return line.replace('%', '\\%').replace('_', '\\_')
 
-    
-def make_xelatex_src(code, lines, metadata):
-    src = XELATEX_PREAMBLE0 + [XELATEX_FOOTER.format(code)] + XELATEX_PREAMBLE1
+
+def init_xelatex_src():
+    return XELATEX_PREAMBLE0 + XELATEX_PREAMBLE1
+
+
+def update_xelatex_src(src, code, lines, metadata, is_last=False):
+    src += [XELATEX_FOOTER.format(code),
+            XELATEX_RESET_PAGE_NUMBER]
     
     for i, l in enumerate(lines):
         meta = metadata.get(i, [])
@@ -112,38 +112,11 @@ def make_xelatex_src(code, lines, metadata):
             new_l += '\\\\\n'
         if a:
             src.append(new_l)
-            
-    src.append(XELATEX_EOF)
-    
-    return src
-
-    
-def start_xelatex_src(code, pages):
-    src = XELATEX_PREAMBLE0 + [XELATEX_FOOTER.format(code)] + XELATEX_PREAMBLE1
-    
-    for i, page in enumerate(pages):
-        src += page
-        if i + 1 != len(pages):
-            src += [XELATEX_PAGE_DELIMETER]
-    src += XELATEX_FILE_PAGES_END
-    
-    return src
-
-    
-def update_xelatex_src(src, code, pages, is_last=False):
-    src += [XELATEX_FOOTER.format(code),
-            XELATEX_RESET_PAGE_NUMBER,
-            XELATEX_FILE_PAGES_START]
-    
-    for i, page in enumerate(pages):
-        src += page
-        if i + 1 != len(pages):
-            src += [XELATEX_PAGE_DELIMETER]
     if is_last:
-        src += [XELATEX_EOF]
+        src.append(XELATEX_EOF)
     else:
-        src += XELATEX_FILE_PAGES_END
-    
+        src.append(XELATEX_PAGE_DELIMETER)
+
 
 def _call_cmd(cmd_list):
     p = subprocess.Popen(cmd_list,

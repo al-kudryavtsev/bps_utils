@@ -25,50 +25,51 @@ def log_output(data):
 
 MOSCOW_APTS = ('UUDD', 'UUWW', 'UUEE')
     
-def process_file(data_fname, is_takeoff, ac_eng, apt_code, pdf_folder, pdf_fname_template, temp_folder):
-    
-    pdf_basename = os.path.basename(pdf_fname_template % dict(ac_eng=ac_eng, code=apt_code))
-    
-    if apt_code in MOSCOW_APTS:
-        pdf_basename = '_' + pdf_basename
-    
+def process_file(data_fname, is_takeoff, ac_eng, apt_code, tex_src, is_last):
     data, metadata = preprocess(data_fname, ac_eng, apt_code, is_takeoff)
-    tex_src = tex.make_xelatex_src(apt_code, data, metadata)
-    
-    tex_fname = os.path.join(temp_folder, pdf_basename[:-4] + '.tex')
-    with open(tex_fname, 'w') as f:
-        codecs.getwriter('utf-8')(f).writelines(tex_src)
-    
-    tex.compile_xelatex(tex_fname, pdf_folder, temp_folder)
+    tex.update_xelatex_src(tex_src, apt_code, data, metadata, is_last=is_last)
 
 
-def process_folder(ac_eng_folder, case_folder, ac_eng, is_takeoff):
+def process_folders(ac_eng_folder, task, ac_eng, type):
     cwd = os.getcwd()
     os.chdir(ac_eng_folder)
 
-    log_output("'%s' %s started.\n" % (ac_eng_folder, case_folder))
+    (folders, group_folder) = task
+    
+    log_output("'%s' %s started.\n" % (ac_eng_folder, ' / '.join(folders)))
     t0 = datetime.datetime.now()
 
     try:
-        pdf_folder = case_folder + '_PDF'
-        temp_folder = case_folder + '_AUX'
+        pdf_folder = group_folder + '_PDF'
+        temp_folder = group_folder + '_AUX'
         for f in [pdf_folder, temp_folder]:
             if not os.path.exists(f): os.makedirs(f)
         
+        pdf_fname_template = PDF_NAME_TEMPLATES[group_folder]
         for apt_code in APT_CODES:
-            data_fname = os.path.join(case_folder, apt_code + '.out')
-            pdf_fname_template = PDF_NAME_TEMPLATES[case_folder]
-            process_file(
-                data_fname, is_takeoff,
-                ac_eng, apt_code, pdf_folder,
-                pdf_fname_template, temp_folder)
+            tex_src = tex.init_xelatex_src()
+            for i, case_folder in enumerate(folders):
+                data_fname = os.path.join(case_folder, apt_code + '.out')
+                process_file(
+                    data_fname, type == 'takeoff',
+                    ac_eng, apt_code, tex_src, is_last=(i == len(folders) - 1))
+            
+            pdf_basename = os.path.basename(pdf_fname_template % dict(ac_eng=ac_eng, code=apt_code))
+    
+            if apt_code in MOSCOW_APTS:
+                pdf_basename = '_' + pdf_basename
+            tex_fname = os.path.join(temp_folder, pdf_basename[:-4] + '.tex')
+            with open(tex_fname, 'w') as f:
+                codecs.getwriter('utf-8')(f).writelines(tex_src)
+
+            tex.compile_xelatex(tex_fname, pdf_folder, temp_folder)
 
         shutil.rmtree(temp_folder)
     finally:
         os.chdir(cwd)
     
     delta_time = datetime.datetime.now() - t0
-    log_output("'%s' %s finished. Time taken: %s.\n" % (ac_eng_folder, case_folder, str(delta_time)))
+    log_output("'%s' %s finished. Time taken: %s.\n" % (ac_eng_folder, ' / '.join(folders), str(delta_time)))
     
  
 def process(id, queue, error_queue):
@@ -83,7 +84,7 @@ def process(id, queue, error_queue):
             if args is None:
                 log_output('Nothing to do.\n')
                 break
-            process_folder(*args)
+            process_folders(**args)
 
     except KeyboardInterrupt:
         log_output('Terminating.\n')
@@ -181,12 +182,27 @@ if __name__ == '__main__':
             task = ALL_TASKS[ac_eng_folder]
             ac_eng_folder = os.path.join(DATA_FOLDER, ac_eng_folder)
             ac_eng = task['ac_eng']
-            for case_folder in task['takeoff']:
-                if TARGET_FOLDERS is None or case_folder in TARGET_FOLDERS:
-                    enqueue_and_check(queue, error_queue, (ac_eng_folder, case_folder, ac_eng, True))
-            for case_folder in task['landing']:
-                if TARGET_FOLDERS is None or case_folder in TARGET_FOLDERS:
-                    enqueue_and_check(queue, error_queue, (ac_eng_folder, case_folder, ac_eng, False))
+            for takeoff_or_landing in ('takeoff', 'landing'):
+                grouped_folders = {}
+                for case_folder in task[takeoff_or_landing]:
+                    if TARGET_FOLDERS is not None and case_folder not in TARGET_FOLDERS:
+                        continue
+                    if case_folder in FOLDER_GROUP_RULES:
+                        group = FOLDER_GROUP_RULES[case_folder]
+                        grouped_folders.setdefault(group, [])
+                        grouped_folders[group].append(case_folder)
+                    else:
+                        enqueue_and_check(queue, error_queue,
+                            dict(ac_eng_folder=ac_eng_folder,
+                                ac_eng=ac_eng,
+                                type=takeoff_or_landing,
+                                task=([case_folder], case_folder)))
+                for group, folders in grouped_folders.iteritems():
+                    enqueue_and_check(queue, error_queue,
+                        dict(ac_eng_folder=ac_eng_folder,
+                            ac_eng=ac_eng,
+                            type=takeoff_or_landing,
+                            task=(folders, group)))
 
         for _ in range(proc_count):
             enqueue_and_check(queue, error_queue, None)
