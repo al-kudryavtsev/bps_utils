@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from preprocess import MetaTag
 
 XELATEX_PREAMBLE0 = r'''
@@ -135,7 +136,7 @@ def compile_xelatex(tex_fname, pdf_folder, temp_folder):
 
         
 def preinstall_packages():
-    print 'Checking installed MikTex packages...'
+    sys.stdout.write('Checking installed MikTex packages...\n')
     (code, out, err) = _call_cmd(['mpm', '--list'])
     if code != 0:
         raise MikTexException('Failed to call Miktex package manager.\n', out, err)
@@ -143,15 +144,14 @@ def preinstall_packages():
     
     for p in _REQUIRED_PACKAGES:
         if not p in installed_packages:
-            print 'Installing package "%s"...' % p
+            sys.stdout.write('Installing package "%s"...\n' % p)
             (code, out, err) = _call_cmd(['mpm', '--install', p])
             if code != 0:
                 raise MikTexException('Failed to install package "%s".\n' % p, out, err)
-    print 'All required MikTex packages installed.'
+    sys.stdout.write('All required MikTex packages installed.\n')
     
     
 def _test():
-    import sys
     src = start_xelatex_src("1", [["hello\n", "world\n"], ["bye\n", "world\n"]])
     update_xelatex_src(src, "2", [["hello\n", "world\n"], ["bye\n", "world\n"]], is_last=True)
     sys.stdout.writelines(src)

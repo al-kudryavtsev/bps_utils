@@ -19,8 +19,10 @@ PROC_ID = 0
 LOG_FILE = None
 
 def log_output(data):
-    sys.stdout.write("(%d) %s" % (PROC_ID, data))
-    LOG_FILE.write(data.encode(sys.stdout.encoding, errors='replace'))
+    sys.stdout.write(("(%d) %s" % (PROC_ID, data)).\
+        encode(sys.stdout.encoding or 'utf8'))
+    LOG_FILE.write(data.encode('utf8',
+        errors='replace'))
 
 
 MOSCOW_APTS = ('UUDD', 'UUWW', 'UUEE')
