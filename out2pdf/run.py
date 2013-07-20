@@ -27,9 +27,11 @@ def log_output(data):
 
 MOSCOW_APTS = ('UUDD', 'UUWW', 'UUEE')
     
-def process_file(data_fname, is_takeoff, ac_eng, apt_code, tex_src, is_last):
+def process_file(data_fname, is_takeoff, ac_eng, apt_code, tex_src,
+    calc_type, is_last):
     data, metadata = preprocess(data_fname, ac_eng, apt_code, is_takeoff)
-    tex.update_xelatex_src(tex_src, apt_code, data, metadata, is_last=is_last)
+    tex.update_xelatex_src(tex_src, apt_code, data, metadata,
+        calc_type, is_last=is_last)
 
 
 def process_folders(ac_eng_folder, task, ac_eng, type):
@@ -54,7 +56,9 @@ def process_folders(ac_eng_folder, task, ac_eng, type):
                 data_fname = os.path.join(case_folder, apt_code + '.out')
                 process_file(
                     data_fname, type == 'takeoff',
-                    ac_eng, apt_code, tex_src, is_last=(i == len(folders) - 1))
+                    ac_eng, apt_code, tex_src,
+                    os.path.basename(case_folder),
+                    is_last=(i == len(folders) - 1))
             
             pdf_basename = os.path.basename(pdf_fname_template % dict(ac_eng=ac_eng, code=apt_code))
     

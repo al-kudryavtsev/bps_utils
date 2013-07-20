@@ -12,6 +12,7 @@ XELATEX_PREAMBLE0 = r'''
 \usepackage[russian,english]{babel}
 \usepackage[usenames,dvipsnames,svgnames]{xcolor}
 \usepackage{etoolbox}
+\usepackage[hidelinks, bookmarks=true, unicode=true]{hyperref}
 \usepackage[normalem]{ulem}
 \usepackage{fancyvrb}
 \DefineShortVerb{\|}
@@ -19,6 +20,12 @@ XELATEX_PREAMBLE0 = r'''
 \preto{\@verbatim}{\topsep=0pt \partopsep=0pt }
 \makeatother
 \setlength{\parindent}{0in}
+
+\newcommand\invisiblesection[1]{%
+  \refstepcounter{section}%
+  \addcontentsline{toc}{section}{\protect\numberline{\thesection}#1}%
+  \sectionmark{#1}}
+
 
 \setmonofont{Lucida Console}
 \setromanfont{Lucida Console}
@@ -49,6 +56,7 @@ XELATEX_UNDERLINE = '''\\verb|{0}|\\SaveVerb{{UnderlinedVerb}}|{1}|\\uline{{\\Us
 XELATEX_LARGE_FONT = '''\\verb|{0}|{{\\Large {1}}}'''
 
 
+XELATEX_BOOKMARK_SECTION = "\\invisiblesection{{{0}}}\n"
 XELATEX_RESET_PAGE_NUMBER = r"\setcounter{page}{1}" + '\n'
 
 
@@ -57,7 +65,7 @@ XELATEX_EOF = r"\clearpage}\end{document}" + "\n"
 
 _REQUIRED_PACKAGES = ('extsizes', 'l3packages', 'l3kernel', 'tipa', 'ulem',
     'xetex-def', 'realscripts', 'metalogo', 'fancyhdr', 'xcolor', 'etoolbox',
-    'fancyvrb')
+    'fancyvrb', 'hyperref')
 
 
 class MikTexException(Exception):
@@ -78,8 +86,9 @@ def init_xelatex_src():
     return XELATEX_PREAMBLE0 + XELATEX_PREAMBLE1
 
 
-def update_xelatex_src(src, code, lines, metadata, is_last=False):
-    src += [XELATEX_FOOTER.format(code),
+def update_xelatex_src(src, code, lines, metadata, calc_type, is_last=False):
+    src += [XELATEX_FOOTER.format(_tex_escape(code + ' ' + calc_type)),
+            XELATEX_BOOKMARK_SECTION.format(_tex_escape(calc_type)),
             XELATEX_RESET_PAGE_NUMBER]
     
     for i, l in enumerate(lines):
@@ -132,6 +141,11 @@ def compile_xelatex(tex_fname, pdf_folder, temp_folder):
         '-output-directory', pdf_folder, '-aux-directory', temp_folder, tex_fname])
     if code != 0:
         raise MikTexException('Failed to execute xelatex for file "%s"\n.' %
+            tex_fname, out, err)
+    (code, out, err) = _call_cmd(['xelatex', '-interaction=nonstopmode',
+        '-output-directory', pdf_folder, '-aux-directory', temp_folder, tex_fname])
+    if code != 0:
+        raise MikTexException('Failed to execute xelatex (second time) for file "%s"\n.' %
             tex_fname, out, err)
 
         
